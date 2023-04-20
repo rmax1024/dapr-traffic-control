@@ -54,11 +54,11 @@ public class VehicleActor : Actor, IVehicleActor, IRemindable
 
             // handle possible speeding violation
             int violation = _speedingViolationCalculator.DetermineSpeedingViolationInKmh(
-                vehicleState.EntryTimestamp, vehicleState.ExitTimestamp.Value);
+                vehicleState.EntryTimestamp!.Value, vehicleState.ExitTimestamp.Value);
             if (violation > 0)
             {
                 Logger.LogInformation($"Speeding violation detected ({violation} KMh) of vehicle " +
-                    $"with license-number {vehicleState.LicenseNumber}.");
+                    $"with license-number {vehicleState!.LicenseNumber}.");
 
                 var speedingViolation = new SpeedingViolation
                 {

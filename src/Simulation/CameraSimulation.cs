@@ -54,7 +54,7 @@ public class CameraSimulation
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Camera {_camNumber} error: {ex.Message}");
+                Console.WriteLine($"Camera {_camNumber} error: {ex}");
             }
         }
     }

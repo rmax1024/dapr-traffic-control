@@ -10,16 +10,24 @@ public class DaprVehicleStateRepository : IVehicleStateRepository
         _daprClient = daprClient;
     }
 
-    public async Task SaveVehicleStateAsync(VehicleState vehicleState)
+    public async Task SaveVehicleStateAsync(VehicleState vehicleState, string? etag = null)
     {
-        await _daprClient.SaveStateAsync<VehicleState>(
-            DAPR_STORE_NAME, vehicleState.LicenseNumber, vehicleState);
+        var result = await _daprClient.TrySaveStateAsync(
+            DAPR_STORE_NAME, vehicleState.LicenseNumber, vehicleState, etag);
+        if (result) return;
+
+        (VehicleState currentState, string currentEtag) = await _daprClient.GetStateAndETagAsync<VehicleState>(
+            DAPR_STORE_NAME, vehicleState.LicenseNumber);
+        if (currentState.ExitTimestamp == null) currentState = currentState with { ExitTimestamp = vehicleState.ExitTimestamp};
+        if (currentState.EntryTimestamp == null) currentState = currentState with { EntryTimestamp = vehicleState.EntryTimestamp };
+        await _daprClient.TrySaveStateAsync(
+            DAPR_STORE_NAME, vehicleState.LicenseNumber, vehicleState, etag);
     }
 
-    public async Task<VehicleState?> GetVehicleStateAsync(string licenseNumber)
+    public async Task<(VehicleState Value, string ETag)> GetVehicleStateAsync(string licenseNumber)
     {
-        var stateEntry = await _daprClient.GetStateEntryAsync<VehicleState>(
+        (VehicleState value, string etag) stateEntry = await _daprClient.GetStateAndETagAsync<VehicleState>(
             DAPR_STORE_NAME, licenseNumber);
-        return stateEntry.Value;
+        return stateEntry;
     }
 }

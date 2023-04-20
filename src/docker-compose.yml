@@ -1,0 +1,156 @@
+version: '3.4'
+
+services:
+  finecollectionservice:
+    image: ${DOCKER_REGISTRY-}finecollectionservice
+    build:
+      context: ./FineCollectionService
+      dockerfile: Dockerfile
+    networks:
+      - dapr-network
+
+  trafficcontrolservice:
+    image: ${DOCKER_REGISTRY-}trafficcontrolservice
+    build:
+      context: ./TrafficControlService
+      dockerfile: Dockerfile
+    networks:
+      - dapr-network
+
+
+  vehicleregistrationservice:
+    image: ${DOCKER_REGISTRY-}vehicleregistrationservice
+    build:
+      context: ./VehicleRegistrationService
+      dockerfile: Dockerfile
+    networks:
+      - dapr-network
+
+  simulation:
+    image: ${DOCKER_REGISTRY-}simulation
+    build:
+      context: ./Simulation
+      dockerfile: Dockerfile
+    networks:
+      - dapr-network
+
+  dtc-redis:
+    image: redis:6-alpine
+    networks:
+      - dapr-network
+
+  dtc-maildev:
+    image: maildev/maildev:latest
+    environment:
+      - MAILDEV_SMTP_PORT=25
+      - MAILDEV_WEB_PORT=80
+    ports:
+      - "4001:80"   # allows us to access the web console
+    networks:
+      - dapr-network
+
+  dtc-zipkin:
+    image: openzipkin/zipkin-slim
+    ports:
+      - "19411:9411"  # allows us to access the web console
+    networks:
+      - dapr-network
+
+  dapr-placement:
+    image: "daprio/dapr"
+    command: ["./placement", "-port", "50000"]
+    networks:
+      - dapr-network
+
+  dapr-config:
+    build:
+      context: ./dapr
+    networks:
+      - dapr-network
+
+  trafficcontrolservice-dapr:
+    image: "daprio/daprd:edge"
+    command: [
+      "./daprd",
+      "-app-id", "trafficcontrolservice",
+      "-app-port", "6000",
+      "-placement-host-address", "dapr-placement:50000", # Dapr's placement service can be reached via the docker DNS entry
+      "-dapr-http-port", "3600",
+      "-dapr-grpc-port", "60000",
+      "-components-path", "/components",
+      "-config", "/config/config.yaml"
+    ]
+    environment:
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+    volumes_from:
+      - dapr-config
+    depends_on:
+      - trafficcontrolservice
+    network_mode: "service:trafficcontrolservice"
+
+  finecollectionservice-dapr:
+    image: "daprio/daprd:edge"
+    command: [
+      "./daprd",
+      "-app-id", "finecollectionservice",
+      "-app-port", "6001",
+      "-placement-host-address", "dapr-placement:50000", # Dapr's placement service can be reached via the docker DNS entry
+      "-dapr-http-port", "3601",
+      "-dapr-grpc-port", "60001",
+      "-components-path", "/components",
+      "-config", "/config/config.yaml"
+    ]
+    environment:
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+    volumes_from:
+      - dapr-config
+    depends_on:
+      - finecollectionservice
+    network_mode: "service:finecollectionservice"
+
+  vehicleregistrationservice-dapr:
+    image: "daprio/daprd:edge"
+    command: [
+      "./daprd",
+      "-app-id", "vehicleregistrationservice",
+      "-app-port", "6002",
+      "-placement-host-address", "dapr-placement:50000", # Dapr's placement service can be reached via the docker DNS entry
+      "-dapr-http-port", "3602",
+      "-dapr-grpc-port", "60002",
+      "-components-path", "/components",
+      "-config", "/config/config.yaml"
+    ]
+    volumes_from:
+      - dapr-config
+    depends_on:
+      - vehicleregistrationservice
+    network_mode: "service:vehicleregistrationservice"
+
+  simulation-dapr:
+    image: "daprio/daprd:edge"
+    command: [
+      "./daprd",
+      "-app-id", "simulation",
+      "-app-port", "6003",
+      "-placement-host-address", "dapr-placement:50000", # Dapr's placement service can be reached via the docker DNS entry
+      "-dapr-http-port", "3603",
+      "-dapr-grpc-port", "60003",
+      "-components-path", "/components",
+      "-config", "/config/config.yaml"
+    ]
+    environment:
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+    volumes_from:
+      - dapr-config
+    depends_on:
+      - simulation
+    network_mode: "service:simulation"
+networks:
+    dapr-network:
+

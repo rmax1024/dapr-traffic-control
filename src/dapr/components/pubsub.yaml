@@ -9,10 +9,9 @@ spec:
   metadata:
   - name: connectionString
     secretKeyRef: 
-        name: pubsub.sbConnectionString
-        value: pubsub.sbConnectionString
+        name: ServiceBus-ConnectionString
 auth:
-  secretStore: trafficcontrol-secrets
+  secretStore: trafficcontrol-secrets-kv
 scopes:
   - trafficcontrolservice
   - finecollectionservice
